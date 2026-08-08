@@ -1,0 +1,607 @@
+{
+  "name": "AI Voice Receptionist",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "REPLACE_WITH_RETELL_WEBHOOK_PATH",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1744,
+        -144
+      ],
+      "id": "81fc42c4-77fa-4f8b-8d08-1fe9d6a42176",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9fefdb24-ead4-471e-9f72-cd21933a09a8",
+              "name": "=patient_name",
+              "value": "={{ String($json.body.args?.name || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "07b9d2c0-c506-4fce-95a1-e9e5c20a0bdc",
+              "name": "patient_email",
+              "value": "={{ String($json.body.args?.email || '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "0bf4851d-ba9c-43b5-a248-e7aa5d99fbd2",
+              "name": "appointment_time_raw",
+              "value": "={{ String($json.body.args?.time || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "90d74de3-398c-43b1-bc85-254a3b500414",
+              "name": "appointment_start",
+              "value": "={{\nDateTime.fromFormat(\n  String($json.body.args?.time || '').trim(),\n  'yyyy-MM-dd HH:mm',\n  { zone: 'Asia/Karachi' }\n).toISO()\n}}",
+              "type": "string"
+            },
+            {
+              "id": "c7dada63-495f-44a9-b278-3f6229a400de",
+              "name": "appointment_end",
+              "value": "={{\nDateTime.fromFormat(\n  String($json.body.args?.time || '').trim(),\n  'yyyy-MM-dd HH:mm',\n  { zone: 'Asia/Karachi' }\n).plus({ minutes: 30 }).toISO()\n}}",
+              "type": "string"
+            },
+            {
+              "id": "d9dc16b2-96b7-4e75-bd64-4a4c577fb585",
+              "name": "created_at",
+              "value": "={{ $now.setZone('Asia/Karachi').toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "e60793aa-077b-43ab-b4d9-21c97dac221a",
+              "name": "booking_id",
+              "value": "={{ 'BSD-' + $now.toFormat('yyyyMMddHHmmss') + '-' + Math.random().toString(36).slice(2, 7).toUpperCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "d3ea7999-1399-4acd-9e5c-93666bfefe5b",
+              "name": "source",
+              "value": "Retell AI Voice Agent",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1536,
+        -144
+      ],
+      "id": "dfb0d4ea-189b-41ee-a855-2a92fa0dcc25",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  {\n    success: false,\n    reason: \"invalid_input\",\n    message: \"The patient's name, email, or appointment date and time is missing, invalid, or in the past. Please collect the correct information and try again.\"\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1184,
+        48
+      ],
+      "id": "d05f0769-e670-4afa-9884-090b519dc00b",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5ac7400d-9da7-4d0c-ae56-98f0354ce5be",
+              "leftValue": "={{ /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.patient_email) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1168,
+        -240
+      ],
+      "id": "b9896c2e-ceab-448a-8744-5be7f4227f92",
+      "name": "Validate Email Format"
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_CALENDAR_ID",
+          "mode": "id"
+        },
+        "timeMin": "={{ $('Edit Fields').item.json.appointment_start }}",
+        "timeMax": "={{ $('Edit Fields').item.json.appointment_end }}",
+        "options": {
+          "outputFormat": "availability",
+          "timezone": {
+            "__rl": true,
+            "value": "Asia/Karachi",
+            "mode": "list",
+            "cachedResultName": "Asia/Karachi"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -928,
+        -416
+      ],
+      "id": "290a3245-6f4e-4211-854b-a01dc4cb4ba4",
+      "name": "Get availability in a calendar",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d80ad9e7-a577-43f1-84f6-7404564e5fc8",
+              "leftValue": "={{\n  Boolean($json.patient_name?.trim()) &&\n  Boolean($json.patient_email?.trim()) &&\n  Boolean($json.appointment_time_raw?.trim()) &&\n  DateTime.fromISO($json.appointment_start).isValid &&\n  DateTime.fromISO($json.appointment_start).toMillis() > $now.toMillis()\n}}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1376,
+        -144
+      ],
+      "id": "1e82b187-720a-41a7-9c3e-ffebc97555f1",
+      "name": "Validate Required Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "db541ca5-86fe-457a-9299-44835501ea97",
+              "leftValue": "={{ $json.available }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -720,
+        -416
+      ],
+      "id": "b6ec9c70-5993-4ff1-9dae-20c17ef9fc9e",
+      "name": "Is Slot Available?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n{\n  success: false,\n  available: false,\n  reason: \"slot_unavailable\",\n  message: \"The requested appointment time is unavailable. Please ask the caller for another date or time.\",\n  requested_start: $('Edit Fields').item.json.appointment_start,\n  requested_end: $('Edit Fields').item.json.appointment_end\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -512,
+        -320
+      ],
+      "id": "619eef33-965c-45cc-b7a8-69be3ecd06a7",
+      "name": "Slot Unavailable"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_CALENDAR_ID",
+          "mode": "id"
+        },
+        "start": "={{ $('Edit Fields').item.json.appointment_start }}",
+        "end": "={{ $('Edit Fields').item.json.appointment_end }}",
+        "useDefaultReminders": false,
+        "additionalFields": {
+          "attendees": [],
+          "color": "10",
+          "description": "={{   'Patient Name: ' + $('Edit Fields').item.json.patient_name +   '\\nPatient Email: ' + $('Edit Fields').item.json.patient_email +   '\\nBooking ID: ' + $('Edit Fields').item.json.booking_id +   '\\nSource: ' + $('Edit Fields').item.json.source }}",
+          "showMeAs": "opaque",
+          "summary": "={{ $('Edit Fields').item.json.patient_name + ' | Dental Appointment' }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -512,
+        -512
+      ],
+      "id": "c09a9cd7-feb9-4296-8cfe-ea77601dff63",
+      "name": "Create Appointment Event",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Appointments",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Booking ID": "={{ $('Edit Fields').item.json.booking_id }}",
+            "Patient Name": "={{ $('Edit Fields').item.json.patient_name }}",
+            "Patient Email": "={{ $('Edit Fields').item.json.patient_email }}",
+            "Appointment Start": "={{ $('Edit Fields').item.json.appointment_start }}",
+            "Appointment End": "={{ $('Edit Fields').item.json.appointment_end }}",
+            "Status": "Confirmed",
+            "Calendar Event ID": "={{ $('Create Appointment Event').item.json.id }}",
+            "Calendar Event Link": "={{ $('Create Appointment Event').item.json.htmlLink || '' }}",
+            "Source": "={{ $('Edit Fields').item.json.source }}",
+            "Created At": "={{ $('Edit Fields').item.json.created_at }}",
+            "Error Message": "={{ '' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Booking ID",
+              "displayName": "Booking ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Patient Name",
+              "displayName": "Patient Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Patient Email",
+              "displayName": "Patient Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Appointment Start",
+              "displayName": "Appointment Start",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Appointment End",
+              "displayName": "Appointment End",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Calendar Event ID",
+              "displayName": "Calendar Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Calendar Event Link",
+              "displayName": "Calendar Event Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Created At",
+              "displayName": "Created At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error Message",
+              "displayName": "Error Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -304,
+        -512
+      ],
+      "id": "f6e5e60f-dbe2-4092-9b3c-b9d473c0b35c",
+      "name": "Append row in sheet",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Edit Fields').item.json.patient_email }}",
+        "subject": "={{\n  'Appointment Confirmed | Bright Smile Dental Clinic - ' +\n  DateTime.fromISO($('Edit Fields').item.json.appointment_start)\n    .toFormat('dd LLL yyyy')\n}}",
+        "message": "={{\n`<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Appointment Confirmed</title>\n</head>\n\n<body style=\"margin:0; padding:0; background-color:#f3f6f9; font-family:Arial, Helvetica, sans-serif; color:#1f2937;\">\n\n  <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#f3f6f9; padding:30px 15px;\">\n    <tr>\n      <td align=\"center\">\n\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"max-width:620px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 8px 24px rgba(15,23,42,0.08);\">\n\n          <!-- Header -->\n          <tr>\n            <td style=\"background-color:#0f766e; padding:28px 30px; text-align:center;\">\n              \n              <div style=\"font-size:28px; line-height:1; margin-bottom:10px;\">\n                🦷\n              </div>\n\n              <div style=\"font-size:20px; font-weight:700; color:#ffffff; letter-spacing:0.2px;\">\n                Bright Smile Dental Clinic\n              </div>\n\n              <div style=\"font-size:13px; color:#ccfbf1; margin-top:6px;\">\n                Professional dental care with a brighter smile\n              </div>\n\n            </td>\n          </tr>\n\n          <!-- Content -->\n          <tr>\n            <td style=\"padding:34px 32px 16px 32px;\">\n\n              <div style=\"text-align:center; margin-bottom:22px;\">\n                \n                <span style=\"display:inline-block; background-color:#dcfce7; color:#166534; font-size:13px; font-weight:700; padding:8px 14px; border-radius:999px;\">\n                  ✓ APPOINTMENT CONFIRMED\n                </span>\n\n              </div>\n\n              <h1 style=\"margin:0; text-align:center; font-size:26px; line-height:1.3; color:#111827;\">\n                Your appointment is confirmed\n              </h1>\n\n              <p style=\"margin:14px 0 0 0; text-align:center; font-size:15px; line-height:1.7; color:#6b7280;\">\n                Hi ${$('Edit Fields').item.json.patient_name}, your dental appointment has been successfully scheduled.\n              </p>\n\n            </td>\n          </tr>\n\n          <!-- Appointment Details Card -->\n          <tr>\n            <td style=\"padding:18px 32px 26px 32px;\">\n\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;\">\n\n                <tr>\n                  <td colspan=\"2\" style=\"padding:16px 20px; background-color:#ecfdf5; border-bottom:1px solid #d1fae5;\">\n                    <div style=\"font-size:15px; font-weight:700; color:#065f46;\">\n                      Appointment Details\n                    </div>\n                  </td>\n                </tr>\n\n                <tr>\n                  <td style=\"width:38%; padding:16px 20px; border-bottom:1px solid #e5e7eb; font-size:14px; color:#6b7280;\">\n                    Date\n                  </td>\n                  <td style=\"padding:16px 20px; border-bottom:1px solid #e5e7eb; font-size:14px; font-weight:700; color:#111827;\">\n                    ${DateTime.fromISO($('Edit Fields').item.json.appointment_start)\n                      .setZone('Asia/Karachi')\n                      .toFormat('cccc, dd LLLL yyyy')}\n                  </td>\n                </tr>\n\n                <tr>\n                  <td style=\"padding:16px 20px; border-bottom:1px solid #e5e7eb; font-size:14px; color:#6b7280;\">\n                    Time\n                  </td>\n                  <td style=\"padding:16px 20px; border-bottom:1px solid #e5e7eb; font-size:14px; font-weight:700; color:#111827;\">\n                    ${DateTime.fromISO($('Edit Fields').item.json.appointment_start)\n                      .setZone('Asia/Karachi')\n                      .toFormat('hh:mm a')}\n                  </td>\n                </tr>\n\n                <tr>\n                  <td style=\"padding:16px 20px; border-bottom:1px solid #e5e7eb; font-size:14px; color:#6b7280;\">\n                    Duration\n                  </td>\n                  <td style=\"padding:16px 20px; border-bottom:1px solid #e5e7eb; font-size:14px; font-weight:700; color:#111827;\">\n                    30 minutes\n                  </td>\n                </tr>\n\n                <tr>\n                  <td style=\"padding:16px 20px; font-size:14px; color:#6b7280;\">\n                    Booking ID\n                  </td>\n                  <td style=\"padding:16px 20px; font-size:14px; font-weight:700; color:#111827; word-break:break-word;\">\n                    ${$('Edit Fields').item.json.booking_id}\n                  </td>\n                </tr>\n\n              </table>\n\n            </td>\n          </tr>\n\n          <!-- CTA -->\n          <tr>\n            <td align=\"center\" style=\"padding:0 32px 28px 32px;\">\n\n              <a href=\"${$('Create Appointment Event').item.json.htmlLink || '#'}\"\n                 style=\"display:inline-block; background-color:#0f766e; color:#ffffff; text-decoration:none; font-size:15px; font-weight:700; padding:14px 24px; border-radius:8px;\">\n                View Appointment\n              </a>\n\n            </td>\n          </tr>\n\n          <!-- Note -->\n          <tr>\n            <td style=\"padding:0 32px 30px 32px;\">\n\n              <div style=\"background-color:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:16px 18px;\">\n                <div style=\"font-size:14px; line-height:1.6; color:#92400e;\">\n                  <strong>Need to make a change?</strong><br>\n                  Reply to this email or contact the clinic to reschedule or cancel your appointment.\n                </div>\n              </div>\n\n            </td>\n          </tr>\n\n          <!-- Footer -->\n          <tr>\n            <td style=\"background-color:#f8fafc; border-top:1px solid #e5e7eb; padding:24px 30px; text-align:center;\">\n\n              <div style=\"font-size:15px; font-weight:700; color:#111827;\">\n                Bright Smile Dental Clinic\n              </div>\n\n              <div style=\"font-size:13px; line-height:1.7; color:#6b7280; margin-top:8px;\">\n                Thank you for choosing us for your dental care.\n              </div>\n\n              <div style=\"font-size:12px; line-height:1.7; color:#9ca3af; margin-top:12px;\">\n                This is an automated appointment confirmation email.\n              </div>\n\n            </td>\n          </tr>\n\n        </table>\n\n      </td>\n    </tr>\n  </table>\n\n</body>\n</html>`\n}}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Bright Smile Dental Clinic"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -96,
+        -512
+      ],
+      "id": "720dfece-b6c4-49d2-b5a5-e9f9eee995b4",
+      "name": "Send Patient Confirmation Email",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  {\n    success: true,\n    available: true,\n    reason: \"appointment_booked\",\n    message: \"The dental appointment has been booked successfully.\",\n    booking_id: $('Edit Fields').item.json.booking_id,\n    patient_name: $('Edit Fields').item.json.patient_name,\n    patient_email: $('Edit Fields').item.json.patient_email,\n    appointment_start: $('Edit Fields').item.json.appointment_start,\n    appointment_end: $('Edit Fields').item.json.appointment_end,\n    calendar_event_id: $('Create Appointment Event').item.json.id,\n    calendar_event_link: $('Create Appointment Event').item.json.htmlLink || \"\"\n  }\n}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        112,
+        -512
+      ],
+      "id": "98e672c5-d35b-4aa3-92e1-be4f65a2b870",
+      "name": "Respond - Booking Successful",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  {\n    success: false,\n    reason: \"invalid_email\",\n    message: \"The email address is invalid. Please ask the caller to repeat or spell the email address.\"\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -960,
+        -144
+      ],
+      "id": "e0de7e9f-ff58-440e-939b-0ae4ae6566aa",
+      "name": "Respond to Webhook1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Email Format": {
+      "main": [
+        [
+          {
+            "node": "Get availability in a calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get availability in a calendar": {
+      "main": [
+        [
+          {
+            "node": "Is Slot Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Validate Email Format",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Slot Available?": {
+      "main": [
+        [
+          {
+            "node": "Create Appointment Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slot Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Appointment Event": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send Patient Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Patient Confirmation Email": {
+      "main": [
+        [
+          {
+            "node": "Respond - Booking Successful",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}
