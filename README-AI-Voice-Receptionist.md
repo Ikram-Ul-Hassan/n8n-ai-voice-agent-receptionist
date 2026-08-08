@@ -860,11 +860,11 @@ If this repository helps you understand how **Retell AI, n8n, Voice AI, and appo
 
 ---
 
-## 📬 Connect
+## 📬 Let's Connect
 
-**GitHub:** `[https://github.com/Ikram-Ul-Hassan/](https://github.com/Ikram-Ul-Hassan/)`  
-**LinkedIn:** `[www.linkedin.com/in/ikram-ul-hassan/](https://www.linkedin.com/in/ikram-ul-hassan/)`  
-**Email:** `ikramautomations@gmail.com`
+[![GitHub](https://img.shields.io/badge/GitHub-Ikram--Ul--Hassan-181717?style=for-the-badge&logo=github)](https://github.com/Ikram-Ul-Hassan/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Ikram_Ul_Hassan-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/ikram-ul-hassan/)
+[![Email](https://img.shields.io/badge/Email-ikramautomations%40gmail.com-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:ikramautomations@gmail.com)
 
 ---
 
