@@ -862,9 +862,9 @@ If this repository helps you understand how **Retell AI, n8n, Voice AI, and appo
 
 ## 📬 Connect
 
-**GitHub:** `https://github.com/YOUR-USERNAME`  
-**LinkedIn:** `YOUR-LINKEDIN-URL`  
-**Email:** `YOUR-PROFESSIONAL-EMAIL`
+**GitHub:** `[https://github.com/Ikram-Ul-Hassan/](https://github.com/Ikram-Ul-Hassan/)`  
+**LinkedIn:** `[www.linkedin.com/in/ikram-ul-hassan/](https://www.linkedin.com/in/ikram-ul-hassan/)`  
+**Email:** `ikramautomations@gmail.com`
 
 ---
 
